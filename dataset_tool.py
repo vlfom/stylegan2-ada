@@ -845,7 +845,7 @@ def create_from_images(tfrecord_dir, image_dir, shuffle=True, use_labels=True):
 
             if use_labels:
                 cat = image_filenames[order[idx]].split("_")[-3].split("/")[-1]
-                onehot[order[idx], cat_map[cat]] = 1
+                onehot[idx, cat_map[cat]] = 1
 
         if use_labels:
             tfr.add_labels(onehot)
