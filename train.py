@@ -27,7 +27,7 @@ from metrics import metric_defaults
 
 from clearml import Task, Logger
 
-task = Task.init(project_name='Unetiq-ARNO', task_name='StyleGAN2-ADA-test3', continue_last_task=True)
+task = Task.init(project_name=os.environ["CLEARML_PROJECT_NAME"], task_name=os.environ["CLEARML_TASK_NAME"], continue_last_task=True)
 task.connect_configuration('/root/clearml.conf')
 logger = task.get_logger()
 logger.set_default_upload_destination(uri='gs://clearml-bucket-0')
@@ -47,6 +47,7 @@ def setup_training_options(
     # General options (not included in desc).
     gpus=None,  # Number of GPUs: <int>, default = 1 gpu
     snap=None,  # Snapshot interval: <int>, default = 50 ticks
+    im_snap=None,  # Image snapshot interval: <int>, default = 50 ticks
     # Training dataset.
     data=None,  # Training dataset (required): <path>
     res=None,  # Override dataset resolution: <int>, default = highest available
@@ -97,6 +98,10 @@ def setup_training_options(
         raise UserError("--snap must be at least 1")
     args.image_snapshot_ticks = snap
     args.network_snapshot_ticks = snap
+    
+    if im_snap is not None:
+        assert isinstance(im_snap, int)
+        args.image_snapshot_ticks = im_snap
 
     # -----------------------------------
     # Training dataset: data, res, mirror
@@ -750,6 +755,9 @@ def main():
     )
     group.add_argument(
         "--snap", help="Snapshot interval (default: 50 ticks)", type=int, metavar="INT"
+    )
+    group.add_argument(
+        "--im_snap", help="Image snapshot interval (default: 50 ticks)", type=int, metavar="INT"
     )
     group.add_argument(
         "--seed",

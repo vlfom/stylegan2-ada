@@ -26,7 +26,7 @@ from training import dataset
 
 from clearml import Task, Logger
 
-task = Task.init(project_name='Unetiq-ARNO', task_name='StyleGAN2-ADA-test3', continue_last_task=True)
+task = Task.init(project_name=os.environ["CLEARML_PROJECT_NAME"], task_name=os.environ["CLEARML_TASK_NAME"], continue_last_task=True)
 task.connect_configuration('/root/clearml.conf')
 logger = task.get_logger()
 logger.set_default_upload_destination(uri='gs://clearml-bucket-0')
@@ -152,7 +152,7 @@ def training_loop(
     print('Exporting sample images...')
     grid_size, grid_reals, grid_labels = setup_snapshot_image_grid(training_set)
     save_image_grid(grid_reals, os.path.join(run_dir, 'reals.png'), drange=[0,255], grid_size=grid_size,
-        iteration=0, t1="real_grid", t2="grid"))
+        iteration=0, t1="real_grid", t2="grid")
     grid_latents = np.random.randn(np.prod(grid_size), *G.input_shape[1:])
     grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
     save_image_grid(grid_fakes, os.path.join(run_dir, 'fakes_init.png'), drange=[-1,1], grid_size=grid_size)
