@@ -20,6 +20,19 @@ from dnnlib.tflib.autosummary import autosummary
 
 from training import dataset
 
+# ----------------------------------------------------------------------------
+
+# Set up ClearML
+
+from clearml import Task, Logger
+
+task = Task.init(project_name='Unetiq-ARNO', task_name='StyleGAN2-ADA-test3', continue_last_task=True)
+task.connect_configuration('/root/clearml.conf')
+logger = task.get_logger()
+logger.set_default_upload_destination(uri='gs://clearml-bucket-0')
+
+# ----------------------------------------------------------------------------  
+
 #----------------------------------------------------------------------------
 # Select size and contents of the image snapshot grids that are exported
 # periodically during training.
@@ -64,7 +77,7 @@ def setup_snapshot_image_grid(training_set):
 
 #----------------------------------------------------------------------------
 
-def save_image_grid(images, filename, drange, grid_size):
+def save_image_grid(images, filename, drange, grid_size, iteration=None, t1=None, t2=None):
     lo, hi = drange
     gw, gh = grid_size
     images = np.asarray(images, dtype=np.float32)
@@ -75,6 +88,11 @@ def save_image_grid(images, filename, drange, grid_size):
     images = images.transpose(0, 3, 1, 4, 2)
     images = images.reshape(gh * H, gw * W, C)
     PIL.Image.fromarray(images, {3: 'RGB', 1: 'L'}[C]).save(filename)
+
+    # ClearML
+    if iteration is not None:
+        logger.report_image(t1, "{}_tick={}".format(t2, iteration), iteration=iteration,
+        image=PIL.Image.fromarray(images, {3: 'RGB', 1: 'L'}[C]))
 
 #----------------------------------------------------------------------------
 # Main training script.
@@ -133,7 +151,8 @@ def training_loop(
 
     print('Exporting sample images...')
     grid_size, grid_reals, grid_labels = setup_snapshot_image_grid(training_set)
-    save_image_grid(grid_reals, os.path.join(run_dir, 'reals.png'), drange=[0,255], grid_size=grid_size)
+    save_image_grid(grid_reals, os.path.join(run_dir, 'reals.png'), drange=[0,255], grid_size=grid_size,
+        iteration=0, t1="real_grid", t2="grid"))
     grid_latents = np.random.randn(np.prod(grid_size), *G.input_shape[1:])
     grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
     save_image_grid(grid_fakes, os.path.join(run_dir, 'fakes_init.png'), drange=[-1,1], grid_size=grid_size)
@@ -298,14 +317,21 @@ def training_loop(
             if progress_fn is not None:
                 progress_fn(cur_nimg // 1000, total_kimg)
 
-            # Save snapshots.
             if image_snapshot_ticks is not None and (done or cur_tick % image_snapshot_ticks == 0):
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
-                save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes{cur_nimg // 1000:06d}.png'), drange=[-1,1], grid_size=grid_size)
+
+                # ClearML: upload grid
+                save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes{cur_nimg // 1000:06d}.png'), drange=[-1,1], grid_size=grid_size,
+                iteration=cur_tick, t1="gen_grid", t2="grid")
+
             if network_snapshot_ticks is not None and (done or cur_tick % network_snapshot_ticks == 0):
                 pkl = os.path.join(run_dir, f'network-snapshot-{cur_nimg // 1000:06d}.pkl')
                 with open(pkl, 'wb') as f:
                     pickle.dump((G, D, Gs), f)
+
+                # ClearML: upload snapshot
+                task.upload_artifact(f'network-snapshot-{cur_nimg // 1000:06d}.pkl', (G, D, Gs))
+                
                 if len(metrics):
                     print('Evaluating metrics...')
                     for metric in metrics:
