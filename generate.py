@@ -107,6 +107,7 @@ def main():
     parser.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
     g = parser.add_mutually_exclusive_group(required=True)
     g.add_argument('--seeds', type=_parse_num_range, help='List of random seeds')
+    g.add_argument('--interpolation_size', type=_parse_num_range, help='Number of interpolation steps')
     g.add_argument('--dlatents', dest='dlatents_npz', help='Generate images for saved dlatents')
     parser.add_argument('--trunc', dest='truncation_psi', type=float, help='Truncation psi (default: %(default)s)', default=0.5)
     parser.add_argument('--class', dest='class_idx', type=int, help='Class label (default: unconditional)')
