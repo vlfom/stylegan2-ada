@@ -13,6 +13,7 @@ import os
 import pickle
 import re
 
+import imageio
 import numpy as np
 import PIL.Image
 
@@ -75,7 +76,6 @@ def generate_video(
     zs = []
 
     for seed_idx, seed in enumerate(seeds):
-        print("Generating image for seed %d (%d/%d) ..." % (seed, seed_idx, len(seeds)))
         rnd = np.random.RandomState(seed)
         z = rnd.randn(1, *Gs.input_shape[1:])  # [minibatch, component]
         zs.append(z)
@@ -92,14 +92,15 @@ def generate_video(
             z1 += zd
             zs_int.append(z1)
 
-    ims = []
+    imgs = []
 
     for z in zs_int:
+        noise_rnd = np.random.RandomState(1) # fix noise
         tflib.set_vars(
             {var: rnd.randn(*var.shape.as_list()) for var in noise_vars}
         )  # [height, width]
         images = Gs.run(z, label, **Gs_kwargs)  # [minibatch, height, width, channel]
-        ims.append(PIL.Image.fromarray(images[0], "RGB"))
+        imgs.append(PIL.Image.fromarray(images[0], "RGB"))
 
     with imageio.get_writer(f"{outdir}/mov.mp4", mode="I", fps=60) as writer:
         for image in imgs:
@@ -156,12 +157,12 @@ def main():
     g = parser.add_mutually_exclusive_group(required=True)
     g.add_argument("--seeds", type=_parse_num_range, help="List of random seeds")
     g.add_argument(
-        "--interpolation_size",
-        type=_parse_num_range,
-        help="Number of interpolation steps",
-    )
-    g.add_argument(
         "--dlatents", dest="dlatents_npz", help="Generate images for saved dlatents"
+    )
+    parser.add_argument(
+        "--interpolation_size",
+        type=int,
+        help="Number of interpolation steps",
     )
     parser.add_argument(
         "--trunc",
