@@ -90,12 +90,12 @@ def generate_video(
         zd = (z2 - z1) / (interpolation_size + 1)
         for j in range(interpolation_size + 1):
             z1 += zd
-            zs_int.append(z1)
+            zs_int.append(z1.copy())
 
     imgs = []
 
     for z in zs_int:
-        noise_rnd = np.random.RandomState(1) # fix noise
+        noise_rnd = np.random.RandomState(1)  # fix noise
         tflib.set_vars(
             {var: rnd.randn(*var.shape.as_list()) for var in noise_vars}
         )  # [height, width]
@@ -105,6 +105,7 @@ def generate_video(
     with imageio.get_writer(f"{outdir}/mov.mp4", mode="I", fps=60) as writer:
         for image in imgs:
             writer.append_data(np.array(image))
+
 
 # ----------------------------------------------------------------------------
 
