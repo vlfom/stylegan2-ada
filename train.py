@@ -210,8 +210,8 @@ def setup_training_options(
             lrate=-1,
             gamma=-1,
             ema=-1,
-            ramp=0.05,
-            map=2,
+            ramp=None,
+            map=4,
         ),  # custom config
         "stylegan2": dict(
             ref_gpus=8,
