@@ -23,7 +23,7 @@ def parse_kimg_from_network_name(network_pickle_name):
 
     if network_pickle_name is not None:
         resume_run_id = os.path.basename(os.path.dirname(network_pickle_name))
-        RE_KIMG = re.compile('*network-snapshot-(\d+).pkl')
+        RE_KIMG = re.compile('.*network-snapshot-(\d+).pkl')
         try:
             kimg = int(RE_KIMG.match(os.path.basename(network_pickle_name)).group(1))
         except AttributeError:
